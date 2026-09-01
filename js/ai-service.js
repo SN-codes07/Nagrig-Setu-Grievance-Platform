@@ -8,7 +8,7 @@ const AIService = {
   // ━━━ CONFIGURATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   OPENAI_API_KEY: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.OPENAI_API_KEY) || '',
   OPENAI_MODEL: 'gpt-4o-mini',
-  OPENAI_ENDPOINT: 'https://api.openai.com/v1/chat/completions',
+  OPENAI_ENDPOINT: '/api/openai',
 
   // Fallback keywords (used when API is unavailable)
   criticalKeywords: ['fire', 'sparking', 'electric shock', 'collapsed', 'burst', 'accident', 'overflowing sewage', 'deep pothole', 'open manhole', 'flood', 'electrocution', 'death', 'injured', 'dangerous'],
