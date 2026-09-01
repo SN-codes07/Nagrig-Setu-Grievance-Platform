@@ -322,6 +322,24 @@
       </div>
     </section>
 
+    <!-- Reassign Department Modal -->
+    <div id="reassignModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050; align-items: center; justify-content: center;">
+      <div style="background: white; padding: 25px; border-radius: 8px; width: 320px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0;">Forward Complaint</h3>
+        <p style="font-size: 0.9em; color: #555;">Select the correct department for this issue.</p>
+        <select id="reassignDeptSelect" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px;">
+          <option value="Roads & Traffic (PWD)">Roads & Traffic (PWD)</option>
+          <option value="Water Supply & Sewage">Water Supply & Sewage</option>
+          <option value="Solid Waste Management">Solid Waste Management</option>
+          <option value="Electricity & Streetlights">Electricity & Streetlights</option>
+          <option value="Public Health & Sanitation">Public Health & Sanitation</option>
+        </select>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="confirmReassign()" class="btn btn-primary" style="flex: 1;">Forward</button>
+          <button onclick="document.getElementById('reassignModal').style.display = 'none'" class="btn" style="flex: 1; background: #eee; color: #333;">Cancel</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <!-- Scripts -->

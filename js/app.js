@@ -268,6 +268,7 @@ async function renderHigherOfficialTable() {
         <td><span class="badge badge-warning">${t.status}</span></td>
         <td>
           <button class="btn btn-secondary btn-sm" onclick="assignTicket('${t.id}')">Assign Engineer</button>
+          <button class="btn btn-outline-secondary btn-sm mt-1" onclick="openReassignModal('${t.id}')">Forward Dept</button>
         </td>
       </tr>
     `).join('');
@@ -346,6 +347,7 @@ async function renderGroundOfficialTable() {
         <td><span class="badge badge-warning">${t.status}</span></td>
         <td>
           <button class="btn btn-primary btn-sm" onclick="resolveTicket('${t.id}')">Mark Resolved</button>
+          <button class="btn btn-outline-secondary btn-sm mt-1" onclick="openReassignModal('${t.id}')">Forward Dept</button>
         </td>
       </tr>
     `).join('');
@@ -414,3 +416,53 @@ async function renderAdminDashboard() {
     console.error('Error loading admin dashboard:', err);
   }
 }
+
+// ── Reassign Department Logic ───────────────────────────────
+
+let currentReassignTicketId = null;
+
+window.openReassignModal = function(ticketId) {
+  currentReassignTicketId = ticketId;
+  document.getElementById('reassignModal').style.display = 'flex';
+};
+
+window.confirmReassign = async function() {
+  if (!currentReassignTicketId) return;
+  const newDeptName = document.getElementById('reassignDeptSelect').value;
+  document.getElementById('reassignModal').style.display = 'none';
+
+  try {
+    const dept = await SupabaseService.getDepartmentByName(newDeptName);
+    if (!dept) {
+      alert('Department not found in database.');
+      return;
+    }
+
+    await SupabaseService.updateComplaint(currentReassignTicketId, {
+      department_id: dept.id,
+      assigned_to_id: null,
+      status: 'SUBMITTED' 
+    });
+
+    await SupabaseService.createAuditLog({
+      complaint_id: currentReassignTicketId,
+      performed_by: currentProfile.id,
+      action: 'REASSIGNED_DEPT',
+      previous_status: 'IN_PROGRESS', 
+      new_status: 'SUBMITTED',
+      notes: `Forwarded to ${newDeptName}`
+    });
+
+    alert(`Ticket successfully forwarded to ${newDeptName}`);
+    
+    // Refresh UI based on role
+    if (currentProfile.role === 'OFFICIAL_HIGHER') {
+      await renderHigherOfficialTable();
+    } else if (currentProfile.role === 'OFFICIAL_GROUND') {
+      await renderGroundOfficialTable();
+    }
+  } catch (err) {
+    console.error('Error reassigning department:', err);
+    alert('Failed to forward department. Please try again.');
+  }
+};
