@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const title = document.getElementById('compTitle').value;
     const description = document.getElementById('compDescription').value;
-    const category = document.getElementById('compCategory').value;
     const submitBtn = grievanceForm.querySelector('button[type="submit"]');
 
     if (!currentSelectedCoords) {
@@ -38,18 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
       // ── AI Processing (runs in parallel) ──────────────────
       const [aiSummary, aiPriority, aiDepartment] = await Promise.all([
         AIService.summarizeComplaint(title, description),
-        AIService.calculatePriority(category, description),
+        AIService.calculatePriority('', description),
         AIService.suggestDepartment(title, description)
       ]);
 
-      // Use AI-suggested department if available, otherwise use user's selection
-      const finalCategory = aiDepartment || category;
-
-      // Auto-select the department dropdown if AI suggested one
-      if (aiDepartment && aiDepartment !== category) {
-        document.getElementById('compCategory').value = aiDepartment;
-        console.log(`AI auto-categorized: ${category} → ${aiDepartment}`);
-      }
+      // AI determines the department automatically
+      const finalCategory = aiDepartment || 'Public Health & Sanitation';
+      console.log(`🤖 AI categorized → ${finalCategory}`);
 
       // ── Duplicate Detection ───────────────────────────────
       const existingComplaints = await SupabaseService.getAllComplaints();
