@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nagrik Setu Pitch Presentation</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.6; 
+            max-width: 850px; 
+            margin: 0 auto; 
+            padding: 40px; 
+            color: #333; 
+        }
+        h1 { 
+            color: #1a365d; 
+            text-align: center; 
+            border-bottom: 3px solid #2b6cb0; 
+            padding-bottom: 15px; 
+            margin-bottom: 40px;
+        }
+        h2 { 
+            color: #2b6cb0; 
+            margin-top: 35px;
+            font-size: 1.4em;
+        }
+        .slide-box { 
+            background: #f7fafc; 
+            border-left: 5px solid #4299e1; 
+            padding: 20px; 
+            margin-bottom: 25px; 
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .slide-title {
+            font-weight: bold;
+            color: #2d3748;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        ul { margin-bottom: 15px; }
+        li { margin-bottom: 8px; }
+        .tips-box { 
+            background: #fffaf0; 
+            border: 2px solid #fbd38d; 
+            padding: 25px; 
+            border-radius: 8px; 
+            margin-top: 50px; 
+        }
+        .tips-box h3 {
+            margin-top: 0;
+            color: #c05621;
+        }
+        @media print {
+            body { padding: 0; }
+            .slide-box { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎙️ Nagrik Setu: 7-Minute Pitch Script</h1>
+
+    <h2>⏱️ Minute 1: The Hook & Problem Statement</h2>
+    <div class="slide-box">
+        <div class="slide-title">Slide 1: Title & Introduction</div>
+        <p>"Hello everyone. Today we are presenting <strong>Nagrik Setu</strong> (Citizen Bridge) — a unified municipal grievance and public service management platform."</p>
+    </div>
+    <div class="slide-box">
+        <div class="slide-title">Slide 2: The Problem</div>
+        <p>"Currently, civic grievance systems in India face three massive bottlenecks:</p>
+        <ul>
+            <li><strong>Misrouting:</strong> Citizens don't know which department handles their issue, leading to delays.</li>
+            <li><strong>Spam & Duplication:</strong> Hundreds of people report the same pothole, clogging the system.</li>
+            <li><strong>Lack of Accountability:</strong> Ground engineers lack clear assignment workflows, and citizens have zero visibility into the actual status of their complaints."</li>
+        </ul>
+    </div>
+
+    <h2>⏱️ Minute 2: The Solution</h2>
+    <div class="slide-box">
+        <div class="slide-title">Slide 3: Introducing Nagrik Setu</div>
+        <p>"Nagrik Setu solves this by removing the guesswork. It is a smart, geo-enabled, role-based platform that connects citizens directly to the right government official.</p>
+        <p>By leveraging <strong>Automated Intelligence</strong>, our system instantly analyzes a citizen's complaint in plain text, summarizes it, scores its priority, and routes it to the correct department—without the citizen having to select a category."</p>
+    </div>
+
+    <h2>⏱️ Minute 3: Key Features & "The Wow Factor"</h2>
+    <div class="slide-box">
+        <div class="slide-title">Slide 4: Smart Automation</div>
+        <p>"Our standout feature is our <strong>100% Offline Automation Engine</strong>. Instead of relying on expensive or unreliable external APIs that can break or cause network delays, we built a robust, lightning-fast heuristic engine directly into the platform:</p>
+        <ul>
+            <li><strong>Auto-Categorization:</strong> If a user types 'live wire', the system instantly recognizes the danger and assigns it to the Electricity department.</li>
+            <li><strong>Priority Scoring:</strong> It detects emergency keywords (like 'fire' or 'accident') and boosts the SLA priority score to a 9 or 10.</li>
+            <li><strong>Duplicate Detection:</strong> It scans the database for overlapping keywords in recent complaints to prevent spam.</li>
+            <li><strong>Actionable Summaries:</strong> It parses long complaints into one-sentence summaries for busy officials."</li>
+        </ul>
+    </div>
+
+    <h2>⏱️ Minute 4: The 4-Tier Workflow</h2>
+    <div class="slide-box">
+        <div class="slide-title">Slide 5: Role-Based Architecture</div>
+        <p>"We built a fully functional 4-tier ecosystem:</p>
+        <ol>
+            <li><strong>The Citizen:</strong> Logs in, drops a pin on the map, and types their issue.</li>
+            <li><strong>Higher Official (Department Head):</strong> Logs in to view a filtered queue of complaints strictly for their department. They can re-route misassigned tickets or assign them to an engineer via email.</li>
+            <li><strong>Ground Official (Engineer):</strong> Logs in to see only their assigned field tasks. Once fixed, they mark it as 'Resolved'.</li>
+            <li><strong>System Admin:</strong> Gets a birds-eye view of all municipalities with a live GIS heatmap and SLA compliance stats."</li>
+        </ol>
+    </div>
+
+    <h2>⏱️ Minute 5: Technical Architecture</h2>
+    <div class="slide-box">
+        <div class="slide-title">Slide 6: Tech Stack</div>
+        <p>"We engineered this to be highly scalable and lightweight:</p>
+        <ul>
+            <li><strong>Frontend:</strong> Pure HTML, CSS, and Vanilla JavaScript. We avoided heavy frameworks to ensure the portal loads instantly, even on poor 3G mobile networks.</li>
+            <li><strong>Backend & Database:</strong> We used <strong>Supabase (PostgreSQL)</strong>.</li>
+            <li><strong>Security:</strong> We implemented robust relational tables linking profiles, municipalities, and departments, alongside strict database rules.</li>
+            <li><strong>Mapping:</strong> Integrated Leaflet.js with OpenStreetMap for precise GPS plotting.</li>
+            <li><strong>Hosting:</strong> Seamlessly deployed on Vercel."</li>
+        </ul>
+    </div>
+
+    <h2>⏱️ Minute 6: The Live Demo (Action Steps)</h2>
+    <div class="slide-box">
+        <div class="slide-title">Live Demo Walkthrough</div>
+        <ol>
+            <li><strong>Show Citizen View:</strong> "I am logging in as a citizen. I report a 'Huge pothole on Main Street'. Watch as the system automatically categorizes it to 'Roads & Traffic' and gives it a priority score."</li>
+            <li><strong>Show Higher Official View:</strong> "Now, I log out and log in as a Higher Official for the Roads department. I see the ticket. I click 'Assign Engineer' and enter an email."</li>
+            <li><strong>Show Ground Official View:</strong> "Finally, the ground engineer logs in. They see the ticket, fix the issue, and click 'Mark Resolved'."</li>
+            <li><strong>Show Admin Heatmap:</strong> "Here is the admin dashboard plotting these issues on a live map."</li>
+        </ol>
+    </div>
+
+    <h2>⏱️ Minute 7: Future Scope & Conclusion</h2>
+    <div class="slide-box">
+        <div class="slide-title">Slide 7: What's Next?</div>
+        <p>"In the future, we plan to add:</p>
+        <ol>
+            <li>Native mobile apps with camera integration for photo proof.</li>
+            <li>WhatsApp Bot integration so citizens can file complaints via text.</li>
+            <li>Regional language translation.</li>
+        </ol>
+        <br>
+        <p><strong>Conclusion:</strong><br>
+        "With Nagrik Setu, we aren't just logging complaints; we are bridging the gap between citizens and the government, ensuring that every voice is heard, routed, and resolved efficiently. Thank you!"</p>
+    </div>
+
+    <div class="tips-box">
+        <h3>💡 Tips for the Q&A Session (Judge Questions)</h3>
+        <ul>
+            <li><strong>"What if your automation categorizes it wrong?"</strong><br>
+            <em>Answer:</em> "We built a fail-safe. Higher officials have a 'Forward Dept' button. If an issue lands in Water Supply but belongs in Roads, the official clicks one button, and it instantly bounces to the correct department's queue."</li>
+            <br>
+            <li><strong>"How do you handle security and fake logins?"</strong><br>
+            <em>Answer:</em> "We implemented a strict Role-Based Access Control (RBAC) system. Ground engineers can only see their assigned tasks, and department heads can only see their department's queue."</li>
+            <br>
+            <li><strong>"Why didn't you use a framework like React?"</strong><br>
+            <em>Answer:</em> "We wanted maximum performance and zero bloat. By using Vanilla JS and the Supabase CDN, the application is incredibly lightweight, which is crucial for citizens accessing it on low-end smartphones."</li>
+        </ul>
+    </div>
+
+</body>
+</html>

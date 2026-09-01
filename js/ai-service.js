@@ -69,27 +69,50 @@ const AIService = {
     return bestDept;
   },
 
+  // Helper: Haversine distance in kilometers
+  getDistanceInKm(lat1, lon1, lat2, lon2) {
+    const R = 6371; 
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  },
+
   // ━━━ AUTOMATED DUPLICATE DETECTION ━━━━━━━━━━━━━━━━━━━━━━
-  async checkDuplicate(newTitle, newDescription, existingComplaints) {
+  async checkDuplicate(newTitle, newDescription, newLat, newLng, existingComplaints) {
     if (!existingComplaints || existingComplaints.length === 0) return null;
 
     const newText = (newTitle + " " + newDescription).toLowerCase();
-    // Get significant words (length > 4) from the new complaint
     const newWords = newText.split(/[\s,.-]+/).filter(w => w.length > 4);
 
-    // Look at the 10 most recent complaints to find overlaps
-    for (const c of existingComplaints.slice(0, 10)) {
+    // Look at the 30 most recent complaints to find overlaps
+    for (const c of existingComplaints.slice(0, 30)) {
        const existText = (c.title + " " + (c.raw_description || c.description || "")).toLowerCase();
-       
-       // Count how many significant words overlap
        let overlap = newWords.filter(w => existText.includes(w)).length;
        
-       // If 3 or more significant words overlap, flag as potential duplicate
        if (overlap >= 3 && newWords.length >= 3) {
-         return c.id; 
+         // It's a text match! Check distance
+         const dist = this.getDistanceInKm(newLat, newLng, c.latitude, c.longitude);
+         
+         if (dist <= 0.5) { // Within 500 meters
+           return {
+             id: c.id,
+             isSameArea: true,
+             currentPriority: c.priority_score || 3.0
+           };
+         } else {
+           return {
+             id: c.id,
+             isSameArea: false
+           };
+         }
        }
     }
-    return null; // No duplicate found
+    return null; 
   },
 
   // ━━━ AUTOMATED RESOLUTION SUGGESTIONS ━━━━━━━━━━━━━━━━━━━

@@ -47,17 +47,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // ── Duplicate Detection ───────────────────────────────
       const existingComplaints = await SupabaseService.getAllComplaints();
-      const duplicateId = await AIService.checkDuplicate(title, description, existingComplaints);
+      const duplicateResult = await AIService.checkDuplicate(title, description, currentSelectedCoords.lat, currentSelectedCoords.lng, existingComplaints);
 
-      if (duplicateId) {
-        const proceed = confirm(
-          `⚠️ AI detected a similar complaint: ${duplicateId}\n\nDo you still want to file this as a new grievance?`
-        );
-        if (!proceed) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i data-lucide="send"></i> Submit Grievance';
-          lucide.createIcons();
-          return;
+      if (duplicateResult) {
+        if (duplicateResult.isSameArea) {
+          const proceed = confirm(
+            `⚠️ We found the exact same issue already reported in your area (ID: ${duplicateResult.id}).\n\nWould you like to MERGE your report with it to boost its priority instead of creating a new ticket?`
+          );
+          
+          if (proceed) {
+             // MERGE logic
+             let newScore = Math.min((parseFloat(duplicateResult.currentPriority) + 1.0), 10.0).toFixed(1);
+             
+             await SupabaseService.updateComplaint(duplicateResult.id, {
+               priority_score: newScore
+             });
+             
+             await SupabaseService.createAuditLog({
+                complaint_id: duplicateResult.id,
+                performed_by: currentProfile.id,
+                action: 'MERGED',
+                notes: `Additional citizen reported the same issue in this area. Priority boosted to ${newScore}.`
+             });
+             
+             alert(`✅ Your report has been merged with ${duplicateResult.id}.\nIts priority has been boosted to ${newScore}/10!`);
+             
+             grievanceForm.reset();
+             document.getElementById('compLocationDisplay').value = '';
+             currentSelectedCoords = null;
+             submitBtn.disabled = false;
+             submitBtn.innerHTML = '<i data-lucide="send"></i> Submit Grievance';
+             lucide.createIcons();
+             
+             await renderCitizenTable(); 
+             return; 
+          }
+        } else {
+           const proceed = confirm(
+             `⚠️ A similar complaint (${duplicateResult.id}) exists, but in a different location.\n\nDo you still want to file this as a new grievance?`
+           );
+           if (!proceed) {
+             submitBtn.disabled = false;
+             submitBtn.innerHTML = '<i data-lucide="send"></i> Submit Grievance';
+             lucide.createIcons();
+             return;
+           }
         }
       }
 
@@ -89,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         action: 'LODGED',
         new_status: 'SUBMITTED',
         new_department_id: dept ? dept.id : null,
-        notes: `AI Summary: ${aiSummary} | AI Priority: ${aiPriority} | Duplicate of: ${duplicateId || 'None'}`
+        notes: `AI Summary: ${aiSummary} | AI Priority: ${aiPriority} | Duplicate of: ${duplicateResult ? duplicateResult.id : 'None'}`
       });
 
       grievanceForm.reset();
