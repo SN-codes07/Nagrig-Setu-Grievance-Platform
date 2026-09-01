@@ -421,6 +421,7 @@ async function renderAdminDashboard() {
   try {
     const rows = await SupabaseService.getAllComplaints();
     const allTickets = rows.map(mapRowToTicket);
+    window.adminCurrentTickets = allTickets;
 
     document.getElementById('adminTotalCount').innerText = allTickets.length;
     document.getElementById('adminHighPriCount').innerText = allTickets.filter((c) => c.priority >= 7).length;
@@ -499,4 +500,46 @@ window.confirmReassign = async function() {
     console.error('Error reassigning department:', err);
     alert('Failed to forward department. Please try again.');
   }
+};
+
+// ── Report Generation ─────────────────────────────────────────
+
+window.downloadAdminReportCSV = function() {
+  const tickets = window.adminCurrentTickets;
+  if (!tickets || tickets.length === 0) {
+    alert("No records to export.");
+    return;
+  }
+
+  // Define CSV headers
+  const headers = ['Ticket ID', 'Municipality', 'Department', 'Citizen Name', 'Title', 'AI Summary', 'Priority Score', 'Status', 'Assigned Engineer', 'Reported Date'];
+  
+  // Format rows, escaping quotes to prevent CSV breakage
+  const rows = tickets.map(t => [
+    t.id,
+    `"${t.municipality}"`,
+    `"${t.category}"`,
+    `"${t.citizenName}"`,
+    `"${t.title.replace(/"/g, '""')}"`,
+    `"${t.aiSummary.replace(/"/g, '""')}"`,
+    t.priority,
+    t.status,
+    `"${t.assignedTo}"`,
+    t.createdAt
+  ]);
+
+  // Combine headers and rows
+  const csvContent = [headers.join(',')]
+    .concat(rows.map(e => e.join(',')))
+    .join('\n');
+
+  // Trigger file download
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Nagrik_Setu_Report_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
