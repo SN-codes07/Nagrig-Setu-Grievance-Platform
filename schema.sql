@@ -173,7 +173,9 @@ CREATE POLICY "Public update profiles" ON profiles FOR UPDATE USING (true);
 CREATE POLICY "Public read complaints" ON complaints FOR SELECT USING (true);
 CREATE POLICY "Public insert complaints" ON complaints FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update complaints" ON complaints FOR UPDATE USING (true);
+CREATE POLICY "Public delete complaints" ON complaints FOR DELETE USING (true);
 
 -- Audit logs: readable by all, insertable by app
 CREATE POLICY "Public read audit logs" ON complaint_audit_logs FOR SELECT USING (true);
 CREATE POLICY "Public insert audit logs" ON complaint_audit_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public delete audit logs" ON complaint_audit_logs FOR DELETE USING (true);
