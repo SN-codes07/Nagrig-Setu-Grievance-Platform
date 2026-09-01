@@ -222,6 +222,34 @@ const SupabaseService = {
     return data;
   },
 
+  /**
+   * Delete a single complaint
+   */
+  async deleteComplaint(complaintId) {
+    const { error } = await supabaseClient
+      .from('complaints')
+      .delete()
+      .eq('id', complaintId);
+    if (error) {
+      console.error('Delete error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete all complaints (for Admin Demo Reset)
+   */
+  async deleteAllComplaints() {
+    const { error } = await supabaseClient
+      .from('complaints')
+      .delete()
+      .neq('id', 'dummy_value_to_match_all'); // Deletes all rows
+    if (error) {
+      console.error('Delete all error:', error);
+      throw error;
+    }
+  },
+
   // ── Audit Logs ────────────────────────────────────────────
 
   async createAuditLog(entry) {

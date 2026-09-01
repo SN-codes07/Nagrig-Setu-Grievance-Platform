@@ -430,7 +430,7 @@ async function renderAdminDashboard() {
 
     const tbody = document.getElementById('adminMasterTable');
     if (allTickets.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No records available.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No records available.</td></tr>`;
     } else {
       tbody.innerHTML = allTickets.map((t) => `
         <tr>
@@ -440,6 +440,11 @@ async function renderAdminDashboard() {
           <td>${t.aiSummary}</td>
           <td><span class="badge badge-danger">${t.priority}</span></td>
           <td><span class="badge badge-success">${t.status}</span></td>
+          <td>
+            <button class="btn btn-sm" style="background: transparent; color: #e53e3e; border: 1px solid #e53e3e; padding: 4px 8px;" onclick="adminDeleteRecord('${t.id}')">
+              <i data-lucide="trash"></i> Delete
+            </button>
+          </td>
         </tr>
       `).join('');
     }
@@ -542,4 +547,40 @@ window.downloadAdminReportCSV = function() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+};
+
+// ── Admin Delete Operations ───────────────────────────────────
+
+window.adminDeleteRecord = async function(id) {
+  const proceed = confirm(`⚠️ Are you sure you want to permanently delete ticket ${id}?\n\nThis action cannot be undone.`);
+  if (!proceed) return;
+
+  try {
+    await SupabaseService.deleteComplaint(id);
+    alert(`✅ Ticket ${id} has been deleted.`);
+    await renderAdminDashboard();
+  } catch (err) {
+    console.error('Error deleting record:', err);
+    alert('Failed to delete the record. Check console for details.');
+  }
+};
+
+window.adminDeleteAllRecords = async function() {
+  const proceed = confirm(`🛑 DANGER ZONE 🛑\n\nAre you sure you want to PERMANENTLY DELETE ALL TICKETS in the system?\n\nThis is meant for resetting the demo environment and cannot be undone.`);
+  if (!proceed) return;
+
+  const doubleCheck = prompt(`Type "DELETE ALL" to confirm:`).trim();
+  if (doubleCheck !== "DELETE ALL") {
+    alert("Aborted.");
+    return;
+  }
+
+  try {
+    await SupabaseService.deleteAllComplaints();
+    alert(`✅ All database records have been wiped successfully.`);
+    await renderAdminDashboard();
+  } catch (err) {
+    console.error('Error wiping database:', err);
+    alert('Failed to delete records. Check console for details.');
+  }
 };
