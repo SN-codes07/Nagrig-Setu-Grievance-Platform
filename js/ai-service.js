@@ -164,7 +164,7 @@ Which department should handle this? Choose exactly ONE from this list:
 
 Respond with ONLY the department name exactly as listed. No explanation.`;
 
-    const aiDept = await this.callGemini(prompt, 50);
+    let aiDept = await this.callGemini(prompt, 50);
 
     if (aiDept) {
       // Find closest match from valid departments
@@ -176,7 +176,14 @@ Respond with ONLY the department name exactly as listed. No explanation.`;
       if (match) return match;
     }
 
-    return null; // No suggestion, user picks manually
+    // Fallback if AI fails or returns something weird
+    const textLower = (title + " " + description).toLowerCase();
+    if (textLower.includes('road') || textLower.includes('traffic') || textLower.includes('pothole')) return 'Roads & Traffic (PWD)';
+    if (textLower.includes('water') || textLower.includes('pipe') || textLower.includes('leak')) return 'Water Supply & Sewage';
+    if (textLower.includes('garbage') || textLower.includes('waste') || textLower.includes('dump')) return 'Solid Waste Management';
+    if (textLower.includes('electric') || textLower.includes('light') || textLower.includes('power')) return 'Electricity & Streetlights';
+    
+    return 'Public Health & Sanitation'; // Absolute fallback
   },
 
   // ━━━ AI DUPLICATE DETECTION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
