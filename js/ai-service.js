@@ -34,8 +34,8 @@ const AIService = {
    * Send a prompt to Gemini and return the text response
    */
   async callGemini(prompt, maxTokens = 256) {
-    if (!this.GEMINI_API_KEY || this.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-      console.warn('Gemini API key not set. Using fallback logic.');
+    if (!this.GEMINI_API_KEY || !this.GEMINI_API_KEY.startsWith('AIza')) {
+      console.warn('⚠️ Invalid or missing Gemini API Key. Automatically using local fallback logic.');
       return null;
     }
 
