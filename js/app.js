@@ -204,7 +204,7 @@ function mapRowToTicket(row) {
     lat: row.latitude,
     lng: row.longitude,
     status: row.status,
-    assignedTo: row.assignee?.full_name || 'Unassigned',
+    assignedTo: row.assignee?.email || 'Unassigned',
     assignedToId: row.assigned_to_id,
     createdAt: new Date(row.created_at).toLocaleDateString()
   };
@@ -278,18 +278,19 @@ async function renderHigherOfficialTable() {
 }
 
 async function assignTicket(id) {
-  const engineerName = prompt('Enter Ground Engineer Name:', 'Officer Patil');
-  if (engineerName) {
+  const engineerEmail = prompt('Enter Ground Engineer Email Address:', 'engineer@example.com');
+  if (engineerEmail) {
     try {
-      // Look up the engineer's profile (or create one)
-      let engineerProfile = await SupabaseService.getProfileByName(engineerName);
+      // Look up the engineer's profile by email
+      let engineerProfile = await SupabaseService.getProfileByEmail(engineerEmail);
 
       if (!engineerProfile) {
-        // Auto-create a ground official profile
+        // Auto-create a ground official profile if they haven't logged in yet
         const { data, error } = await supabaseClient
           .from('profiles')
           .insert([{
-            full_name: engineerName,
+            email: engineerEmail,
+            full_name: 'Assigned Engineer',
             role: 'OFFICIAL_GROUND',
             municipality_id: currentProfile.municipality_id,
             department_id: currentProfile.department_id

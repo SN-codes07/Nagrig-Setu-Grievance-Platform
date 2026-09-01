@@ -76,11 +76,11 @@ const SupabaseService = {
     return data;
   },
 
-  async getProfileByName(name) {
+  async getProfileByEmail(email) {
     const { data, error } = await supabaseClient
       .from('profiles')
       .select('*')
-      .eq('full_name', name)
+      .eq('email', email)
       .single();
     if (error) { console.error('Profile lookup error:', error); return null; }
     return data;
@@ -127,7 +127,7 @@ const SupabaseService = {
         citizen:profiles!complaints_citizen_id_fkey(full_name),
         municipality:municipalities(name),
         department:departments(name),
-        assignee:profiles!complaints_assigned_to_id_fkey(full_name)
+        assignee:profiles!complaints_assigned_to_id_fkey(full_name, email)
       `)
       .order('created_at', { ascending: false });
 
@@ -148,7 +148,7 @@ const SupabaseService = {
         *,
         municipality:municipalities(name),
         department:departments(name),
-        assignee:profiles!complaints_assigned_to_id_fkey(full_name)
+        assignee:profiles!complaints_assigned_to_id_fkey(full_name, email)
       `)
       .eq('citizen_id', citizenId)
       .order('created_at', { ascending: false });
@@ -171,7 +171,7 @@ const SupabaseService = {
         citizen:profiles!complaints_citizen_id_fkey(full_name),
         municipality:municipalities(name),
         department:departments(name),
-        assignee:profiles!complaints_assigned_to_id_fkey(full_name)
+        assignee:profiles!complaints_assigned_to_id_fkey(full_name, email)
       `)
       .eq('department_id', departmentId)
       .order('created_at', { ascending: false });
