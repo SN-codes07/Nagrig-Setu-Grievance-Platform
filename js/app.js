@@ -1,8 +1,9 @@
 /**
  * Main Application Orchestrator for Nagrik Setu
+ * Integrated with Supabase (PostGIS schema: profiles, complaints, departments, municipalities)
  */
-let complaintsDatabase = [];
 let currentSelectedCoords = null;
+let currentProfile = null; // The logged-in user's Supabase profile row
 
 document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
@@ -15,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Setup Grievance Submission
   const grievanceForm = document.getElementById('grievanceForm');
-  grievanceForm.addEventListener('submit', (e) => {
+  grievanceForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const title = document.getElementById('compTitle').value;
@@ -29,27 +30,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const newTicket = {
       id: `NS-${Math.floor(1000 + Math.random() * 9000)}`,
-      municipality: AuthService.currentUser.municipality,
-      citizenName: AuthService.currentUser.name,
-      category,
       title,
       description,
       aiSummary: AIService.summarizeComplaint(title, description),
       priority: AIService.calculatePriority(category, description),
       lat: currentSelectedCoords.lat,
       lng: currentSelectedCoords.lng,
-      status: 'Submitted',
-      assignedTo: 'Unassigned',
-      createdAt: new Date().toLocaleDateString()
     };
 
-    complaintsDatabase.push(newTicket);
-    grievanceForm.reset();
-    document.getElementById('compLocationDisplay').value = '';
-    currentSelectedCoords = null;
+    try {
+      // Resolve department FK from category name
+      const dept = await SupabaseService.getDepartmentByName(category);
 
-    alert(`Grievance ${newTicket.id} lodged successfully!`);
-    renderCitizenTable();
+      await SupabaseService.createComplaint(
+        newTicket,
+        currentProfile.id,
+        currentProfile.municipality_id,
+        dept ? dept.id : null
+      );
+
+      // Log audit trail
+      await SupabaseService.createAuditLog({
+        complaint_id: newTicket.id,
+        performed_by: currentProfile.id,
+        action: 'LODGED',
+        new_status: 'SUBMITTED',
+        new_department_id: dept ? dept.id : null,
+        notes: `Citizen lodged grievance: ${title}`
+      });
+
+      grievanceForm.reset();
+      document.getElementById('compLocationDisplay').value = '';
+      currentSelectedCoords = null;
+
+      alert(`Grievance ${newTicket.id} lodged successfully!`);
+      await renderCitizenTable();
+    } catch (err) {
+      console.error('Failed to submit grievance:', err);
+      alert('Error submitting grievance. Please try again.');
+    }
   });
 
   // Geolocation trigger
@@ -70,13 +89,28 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function handleLoginSuccess(user) {
+async function handleLoginSuccess(user) {
   document.getElementById('authView').style.display = 'none';
   document.getElementById('appHeader').style.display = 'flex';
   document.getElementById('headerMunicipality').innerText = user.municipality;
   document.getElementById('headerUserName').innerText = user.name;
   document.getElementById('headerUserRole').innerText = user.role.replace('_', ' ');
   document.getElementById('headerAvatar').innerText = user.name.charAt(0).toUpperCase();
+
+  // Find or create the user's profile in Supabase
+  try {
+    currentProfile = await SupabaseService.findOrCreateProfile(user);
+    console.log('Logged in as profile:', currentProfile);
+  } catch (err) {
+    console.error('Profile setup failed:', err);
+    alert('Error setting up user profile: ' + (err.message || JSON.stringify(err)));
+    return;
+  }
+
+  if (!currentProfile) {
+    alert('Profile creation returned empty. Check browser console (F12) for details.');
+    return;
+  }
 
   // Hide all portal views
   ['citizenPortal', 'higherOfficialPortal', 'groundOfficialPortal', 'adminPortal'].forEach((id) => {
@@ -92,22 +126,23 @@ function handleLoginSuccess(user) {
         document.getElementById('compLocationDisplay').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       });
     }, 200);
-    renderCitizenTable();
+    await renderCitizenTable();
   } else if (user.role === 'OFFICIAL_HIGHER') {
     document.getElementById('higherOfficialPortal').style.display = 'block';
-    renderHigherOfficialTable();
+    await renderHigherOfficialTable();
   } else if (user.role === 'OFFICIAL_GROUND') {
     document.getElementById('groundOfficialPortal').style.display = 'block';
-    renderGroundOfficialTable();
+    await renderGroundOfficialTable();
   } else if (user.role === 'ADMIN') {
     document.getElementById('adminPortal').style.display = 'block';
-    renderAdminDashboard();
+    await renderAdminDashboard();
   }
 
   lucide.createIcons();
 }
 
 function handleLogout() {
+  currentProfile = null;
   document.getElementById('appHeader').style.display = 'none';
   ['citizenPortal', 'higherOfficialPortal', 'groundOfficialPortal', 'adminPortal'].forEach((id) => {
     document.getElementById(id).style.display = 'none';
@@ -115,114 +150,229 @@ function handleLogout() {
   document.getElementById('authView').style.display = 'grid';
 }
 
-function renderCitizenTable() {
+/**
+ * Helper: Convert Supabase complaint row (with joins) to display-friendly object
+ */
+function mapRowToTicket(row) {
+  return {
+    id: row.id,
+    municipality: row.municipality?.name || '—',
+    citizenName: row.citizen?.full_name || '—',
+    category: row.department?.name || '—',
+    title: row.title,
+    description: row.raw_description,
+    aiSummary: row.ai_summary || '—',
+    priority: row.priority_score,
+    priorityLevel: row.priority,
+    lat: row.latitude,
+    lng: row.longitude,
+    status: row.status,
+    assignedTo: row.assignee?.full_name || 'Unassigned',
+    assignedToId: row.assigned_to_id,
+    createdAt: new Date(row.created_at).toLocaleDateString()
+  };
+}
+
+// ── Citizen View ────────────────────────────────────────────
+
+async function renderCitizenTable() {
   const tbody = document.getElementById('citizenComplaintTable');
-  const userTickets = complaintsDatabase.filter((c) => c.citizenName === AuthService.currentUser.name);
+  try {
+    const rows = await SupabaseService.getComplaintsByCitizen(currentProfile.id);
+    const userTickets = rows.map(mapRowToTicket);
 
-  if (userTickets.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No complaints filed yet.</td></tr>`;
-    return;
+    if (userTickets.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No complaints filed yet.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = userTickets.map((t) => `
+      <tr>
+        <td><strong>${t.id}</strong></td>
+        <td>${t.title}</td>
+        <td>${t.category}</td>
+        <td><span class="badge ${t.priority >= 7 ? 'badge-danger' : 'badge-warning'}">Score: ${t.priority}</span></td>
+        <td>${t.assignedTo}</td>
+        <td><span class="badge badge-success">${t.status}</span></td>
+        <td>${t.createdAt}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Error loading citizen complaints:', err);
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Error loading complaints.</td></tr>`;
   }
-
-  tbody.innerHTML = userTickets.map((t) => `
-    <tr>
-      <td><strong>${t.id}</strong></td>
-      <td>${t.title}</td>
-      <td>${t.category}</td>
-      <td><span class="badge ${t.priority >= 7 ? 'badge-danger' : 'badge-warning'}">Score: ${t.priority}</span></td>
-      <td>${t.assignedTo}</td>
-      <td><span class="badge badge-success">${t.status}</span></td>
-      <td>${t.createdAt}</td>
-    </tr>
-  `).join('');
 }
 
-function renderHigherOfficialTable() {
+// ── Higher Official View ────────────────────────────────────
+
+async function renderHigherOfficialTable() {
   const tbody = document.getElementById('higherOfficialTable');
-  const deptTickets = complaintsDatabase.filter((c) => c.category === AuthService.currentUser.department || AuthService.currentUser.department === 'All');
+  try {
+    let rows;
+    if (currentProfile.department_id) {
+      rows = await SupabaseService.getComplaintsByDepartment(currentProfile.department_id);
+    } else {
+      rows = await SupabaseService.getAllComplaints();
+    }
+    const deptTickets = rows.map(mapRowToTicket);
 
-  if (deptTickets.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No pending complaints for this department.</td></tr>`;
-    return;
+    if (deptTickets.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No pending complaints for this department.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = deptTickets.map((t) => `
+      <tr>
+        <td><strong>${t.id}</strong></td>
+        <td>${t.aiSummary}</td>
+        <td>${t.category}</td>
+        <td><span class="badge badge-danger">Score: ${t.priority}</span></td>
+        <td>${t.assignedTo}</td>
+        <td><span class="badge badge-warning">${t.status}</span></td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="assignTicket('${t.id}')">Assign Engineer</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Error loading official complaints:', err);
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Error loading complaints.</td></tr>`;
   }
-
-  tbody.innerHTML = deptTickets.map((t) => `
-    <tr>
-      <td><strong>${t.id}</strong></td>
-      <td>${t.aiSummary}</td>
-      <td>${t.category}</td>
-      <td><span class="badge badge-danger">Score: ${t.priority}</span></td>
-      <td>${t.assignedTo}</td>
-      <td><span class="badge badge-warning">${t.status}</span></td>
-      <td>
-        <button class="btn btn-secondary btn-sm" onclick="assignTicket('${t.id}')">Assign Engineer</button>
-      </td>
-    </tr>
-  `).join('');
 }
 
-function assignTicket(id) {
-  const ticket = complaintsDatabase.find((t) => t.id === id);
-  if (ticket) {
-    const engineer = prompt('Enter Ground Engineer Name:', 'Officer Patil');
-    if (engineer) {
-      ticket.assignedTo = engineer;
-      ticket.status = 'In Progress';
-      renderHigherOfficialTable();
+async function assignTicket(id) {
+  const engineerName = prompt('Enter Ground Engineer Name:', 'Officer Patil');
+  if (engineerName) {
+    try {
+      // Look up the engineer's profile (or create one)
+      let engineerProfile = await SupabaseService.getProfileByName(engineerName);
+
+      if (!engineerProfile) {
+        // Auto-create a ground official profile
+        const { data, error } = await supabaseClient
+          .from('profiles')
+          .insert([{
+            full_name: engineerName,
+            role: 'OFFICIAL_GROUND',
+            municipality_id: currentProfile.municipality_id,
+            department_id: currentProfile.department_id
+          }])
+          .select()
+          .single();
+        if (error) throw error;
+        engineerProfile = data;
+      }
+
+      await SupabaseService.updateComplaint(id, {
+        assigned_to_id: engineerProfile.id,
+        status: 'IN_PROGRESS'
+      });
+
+      // Audit log
+      await SupabaseService.createAuditLog({
+        complaint_id: id,
+        performed_by: currentProfile.id,
+        action: 'ASSIGNED',
+        previous_status: 'SUBMITTED',
+        new_status: 'IN_PROGRESS',
+        notes: `Assigned to ${engineerName}`
+      });
+
+      await renderHigherOfficialTable();
+    } catch (err) {
+      console.error('Error assigning ticket:', err);
+      alert('Failed to assign ticket. Please try again.');
     }
   }
 }
 
-function renderGroundOfficialTable() {
+// ── Ground Official View ────────────────────────────────────
+
+async function renderGroundOfficialTable() {
   const tbody = document.getElementById('groundOfficialTable');
-  const tasks = complaintsDatabase.filter((c) => c.assignedTo === AuthService.currentUser.name);
+  try {
+    const rows = await SupabaseService.getComplaintsByAssignee(currentProfile.id);
+    const tasks = rows.map(mapRowToTicket);
 
-  if (tasks.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No active field tasks assigned to you.</td></tr>`;
-    return;
-  }
+    if (tasks.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No active field tasks assigned to you.</td></tr>`;
+      return;
+    }
 
-  tbody.innerHTML = tasks.map((t) => `
-    <tr>
-      <td><strong>${t.id}</strong></td>
-      <td>${t.aiSummary}</td>
-      <td><span class="badge badge-danger">Score: ${t.priority}</span></td>
-      <td>${t.lat.toFixed(3)}, ${t.lng.toFixed(3)}</td>
-      <td><span class="badge badge-warning">${t.status}</span></td>
-      <td>
-        <button class="btn btn-primary btn-sm" onclick="resolveTicket('${t.id}')">Mark Resolved</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function resolveTicket(id) {
-  const ticket = complaintsDatabase.find((t) => t.id === id);
-  if (ticket) {
-    ticket.status = 'Resolved';
-    renderGroundOfficialTable();
+    tbody.innerHTML = tasks.map((t) => `
+      <tr>
+        <td><strong>${t.id}</strong></td>
+        <td>${t.aiSummary}</td>
+        <td><span class="badge badge-danger">Score: ${t.priority}</span></td>
+        <td>${t.lat.toFixed(3)}, ${t.lng.toFixed(3)}</td>
+        <td><span class="badge badge-warning">${t.status}</span></td>
+        <td>
+          <button class="btn btn-primary btn-sm" onclick="resolveTicket('${t.id}')">Mark Resolved</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Error loading ground tasks:', err);
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Error loading tasks.</td></tr>`;
   }
 }
 
-function renderAdminDashboard() {
-  document.getElementById('adminTotalCount').innerText = complaintsDatabase.length;
-  document.getElementById('adminHighPriCount').innerText = complaintsDatabase.filter((c) => c.priority >= 7).length;
-  document.getElementById('adminInProgressCount').innerText = complaintsDatabase.filter((c) => c.status === 'In Progress').length;
-  document.getElementById('adminResolvedCount').innerText = complaintsDatabase.filter((c) => c.status === 'Resolved').length;
+async function resolveTicket(id) {
+  try {
+    await SupabaseService.updateComplaint(id, {
+      status: 'RESOLVED',
+      resolved_at: new Date().toISOString()
+    });
 
-  const tbody = document.getElementById('adminMasterTable');
-  tbody.innerHTML = complaintsDatabase.map((t) => `
-    <tr>
-      <td><strong>${t.id}</strong></td>
-      <td>${t.municipality}</td>
-      <td>${t.category}</td>
-      <td>${t.aiSummary}</td>
-      <td><span class="badge badge-danger">${t.priority}</span></td>
-      <td><span class="badge badge-success">${t.status}</span></td>
-    </tr>
-  `).join('');
+    // Audit log
+    await SupabaseService.createAuditLog({
+      complaint_id: id,
+      performed_by: currentProfile.id,
+      action: 'STATUS_CHANGE',
+      previous_status: 'IN_PROGRESS',
+      new_status: 'RESOLVED',
+      notes: 'Marked as resolved by ground officer'
+    });
 
-  setTimeout(() => {
-    MapService.initAdminHeatmap(complaintsDatabase);
-  }, 200);
+    await renderGroundOfficialTable();
+  } catch (err) {
+    console.error('Error resolving ticket:', err);
+    alert('Failed to resolve ticket. Please try again.');
+  }
+}
+
+// ── Admin Dashboard ─────────────────────────────────────────
+
+async function renderAdminDashboard() {
+  try {
+    const rows = await SupabaseService.getAllComplaints();
+    const allTickets = rows.map(mapRowToTicket);
+
+    document.getElementById('adminTotalCount').innerText = allTickets.length;
+    document.getElementById('adminHighPriCount').innerText = allTickets.filter((c) => c.priority >= 7).length;
+    document.getElementById('adminInProgressCount').innerText = allTickets.filter((c) => c.status === 'IN_PROGRESS').length;
+    document.getElementById('adminResolvedCount').innerText = allTickets.filter((c) => c.status === 'RESOLVED').length;
+
+    const tbody = document.getElementById('adminMasterTable');
+    if (allTickets.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">No records available.</td></tr>`;
+    } else {
+      tbody.innerHTML = allTickets.map((t) => `
+        <tr>
+          <td><strong>${t.id}</strong></td>
+          <td>${t.municipality}</td>
+          <td>${t.category}</td>
+          <td>${t.aiSummary}</td>
+          <td><span class="badge badge-danger">${t.priority}</span></td>
+          <td><span class="badge badge-success">${t.status}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    setTimeout(() => {
+      MapService.initAdminHeatmap(allTickets);
+    }, 200);
+  } catch (err) {
+    console.error('Error loading admin dashboard:', err);
+  }
 }
