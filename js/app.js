@@ -22,25 +22,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const title = document.getElementById('compTitle').value;
     const description = document.getElementById('compDescription').value;
     const category = document.getElementById('compCategory').value;
+    const submitBtn = grievanceForm.querySelector('button[type="submit"]');
 
     if (!currentSelectedCoords) {
       alert('Please drop a pin on the map to indicate the issue location.');
       return;
     }
 
-    const newTicket = {
-      id: `NS-${Math.floor(1000 + Math.random() * 9000)}`,
-      title,
-      description,
-      aiSummary: AIService.summarizeComplaint(title, description),
-      priority: AIService.calculatePriority(category, description),
-      lat: currentSelectedCoords.lat,
-      lng: currentSelectedCoords.lng,
-    };
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i data-lucide="loader"></i> AI is analyzing your complaint...';
+    lucide.createIcons();
 
     try {
+      // ── AI Processing (runs in parallel) ──────────────────
+      const [aiSummary, aiPriority, aiDepartment] = await Promise.all([
+        AIService.summarizeComplaint(title, description),
+        AIService.calculatePriority(category, description),
+        AIService.suggestDepartment(title, description)
+      ]);
+
+      // Use AI-suggested department if available, otherwise use user's selection
+      const finalCategory = aiDepartment || category;
+
+      // Auto-select the department dropdown if AI suggested one
+      if (aiDepartment && aiDepartment !== category) {
+        document.getElementById('compCategory').value = aiDepartment;
+        console.log(`AI auto-categorized: ${category} → ${aiDepartment}`);
+      }
+
+      // ── Duplicate Detection ───────────────────────────────
+      const existingComplaints = await SupabaseService.getAllComplaints();
+      const duplicateId = await AIService.checkDuplicate(title, description, existingComplaints);
+
+      if (duplicateId) {
+        const proceed = confirm(
+          `⚠️ AI detected a similar complaint: ${duplicateId}\n\nDo you still want to file this as a new grievance?`
+        );
+        if (!proceed) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i data-lucide="send"></i> Submit Grievance';
+          lucide.createIcons();
+          return;
+        }
+      }
+
+      // ── Build Ticket ──────────────────────────────────────
+      const newTicket = {
+        id: `NS-${Math.floor(1000 + Math.random() * 9000)}`,
+        title,
+        description,
+        aiSummary: aiSummary,
+        priority: aiPriority,
+        lat: currentSelectedCoords.lat,
+        lng: currentSelectedCoords.lng,
+      };
+
       // Resolve department FK from category name
-      const dept = await SupabaseService.getDepartmentByName(category);
+      const dept = await SupabaseService.getDepartmentByName(finalCategory);
 
       await SupabaseService.createComplaint(
         newTicket,
@@ -56,18 +95,22 @@ document.addEventListener('DOMContentLoaded', () => {
         action: 'LODGED',
         new_status: 'SUBMITTED',
         new_department_id: dept ? dept.id : null,
-        notes: `Citizen lodged grievance: ${title}`
+        notes: `AI Summary: ${aiSummary} | AI Priority: ${aiPriority} | Duplicate of: ${duplicateId || 'None'}`
       });
 
       grievanceForm.reset();
       document.getElementById('compLocationDisplay').value = '';
       currentSelectedCoords = null;
 
-      alert(`Grievance ${newTicket.id} lodged successfully!`);
+      alert(`✅ Grievance ${newTicket.id} lodged successfully!\n\n🤖 AI Summary: ${aiSummary}\n📊 AI Priority: ${aiPriority}/10\n🏢 Department: ${finalCategory}`);
       await renderCitizenTable();
     } catch (err) {
       console.error('Failed to submit grievance:', err);
       alert('Error submitting grievance. Please try again.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i data-lucide="send"></i> Submit Grievance';
+      lucide.createIcons();
     }
   });
 
