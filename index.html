@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nagrik Setu | Citizen Grievance Redressal Platform</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Leaflet Maps CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- TOP APP HEADER -->
+  <header class="app-header" id="appHeader" style="display: none;">
+    <div class="header-brand">
+      <div class="brand-badge">🏛️</div>
+      <div>
+        <h1 class="brand-title">Nagrik Setu</h1>
+        <p class="brand-sub" id="headerMunicipality">Municipal Grievance System</p>
+      </div>
+    </div>
+
+    <div class="header-user-menu">
+      <div class="user-chip">
+        <div class="user-avatar" id="headerAvatar">U</div>
+        <div class="user-details">
+          <span class="user-name" id="headerUserName">User Name</span>
+          <span class="user-role-tag" id="headerUserRole">Role</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="logoutBtn">
+        <i data-lucide="log-out"></i> Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="main-wrapper">
+
+    <!-- ============================================== -->
+    <!-- 1. LOGIN / AUTH GATEWAY VIEW                   -->
+    <!-- ============================================== -->
+    <section class="auth-wrapper" id="authView">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="auth-logo">🏛️</div>
+          <h2>Nagrik Setu Portal</h2>
+          <p>Official Municipal Citizen Grievance & Public Service Management</p>
+        </div>
+
+        <!-- Role Selector Tabs -->
+        <div class="role-tabs">
+          <button class="role-tab active" data-role="CITIZEN">Citizen</button>
+          <button class="role-tab" data-role="OFFICIAL_HIGHER">Govt Official (Higher)</button>
+          <button class="role-tab" data-role="OFFICIAL_GROUND">Govt Official (Ground)</button>
+          <button class="role-tab" data-role="ADMIN">Administrator</button>
+        </div>
+
+        <form id="loginForm" class="auth-form">
+          <div class="form-group">
+            <label>Select Municipality / Corporation</label>
+            <select id="authMunicipality" required>
+              <option value="Thane Municipal Corporation (TMC)">Thane Municipal Corporation (TMC)</option>
+              <option value="Brihanmumbai Municipal Corp (BMC)">Brihanmumbai Municipal Corp (BMC)</option>
+              <option value="Pune Municipal Corporation (PMC)">Pune Municipal Corporation (PMC)</option>
+              <option value="Navi Mumbai Municipal Corp (NMMC)">Navi Mumbai Municipal Corp (NMMC)</option>
+              <option value="Kalyan-Dombivli Corp (KDMC)">Kalyan-Dombivli Corp (KDMC)</option>
+              <option value="Nagpur Municipal Corporation (NMC)">Nagpur Municipal Corporation (NMC)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label id="identifierLabel">Email Address / Phone Number</label>
+            <input type="text" id="authIdentifier" placeholder="e.g. rahul.sharma@example.com" required />
+          </div>
+
+          <div class="form-group" id="deptGroup" style="display: none;">
+            <label>Assigned Department</label>
+            <select id="authDepartment">
+              <option value="Roads & Traffic (PWD)">Roads & Traffic (PWD)</option>
+              <option value="Water Supply & Sewage">Water Supply & Sewage</option>
+              <option value="Solid Waste Management">Solid Waste Management</option>
+              <option value="Electricity & Streetlights">Electricity & Streetlights</option>
+              <option value="Public Health & Sanitation">Public Health & Sanitation</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="passGroup" style="display: none;">
+            <label>Security Password / Passphrase</label>
+            <input type="password" id="authPassword" placeholder="Enter secure credentials" />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">
+            <i data-lucide="shield-check"></i> Sign In to Portal
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 2. CITIZEN PORTAL                              -->
+    <!-- ============================================== -->
+    <section class="portal-view" id="citizenPortal" style="display: none;">
+      <div class="portal-header">
+        <div>
+          <h2>Lodge a Grievance</h2>
+          <p>Submit public civic issues directly with geo-tagging and live updates.</p>
+        </div>
+      </div>
+
+      <div class="two-column-workspace">
+        <!-- Form Left Column -->
+        <div class="card">
+          <form id="grievanceForm">
+            <div class="form-group">
+              <label>Grievance Category</label>
+              <select id="compCategory" required>
+                <option value="">-- Choose Category --</option>
+                <option value="Roads & Traffic (PWD)">Roads, Potholes & Footpaths</option>
+                <option value="Water Supply & Sewage">Water Supply & Pipeline Leakages</option>
+                <option value="Solid Waste Management">Garbage Dumps & Waste Clearance</option>
+                <option value="Electricity & Streetlights">Damaged Poles & Power Outages</option>
+                <option value="Public Health & Sanitation">Public Health & Pest Outbreak</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Issue Title</label>
+              <input type="text" id="compTitle" placeholder="e.g. Open manhole hazard on Link Road" required />
+            </div>
+
+            <div class="form-group">
+              <label>Detailed Complaint Description</label>
+              <textarea id="compDescription" rows="4" placeholder="Provide accurate details of the problem..." required></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Selected GPS Location</label>
+              <input type="text" id="compLocationDisplay" readonly placeholder="Click map on the right to pinpoint location" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+              <i data-lucide="send"></i> Submit Grievance
+            </button>
+          </form>
+        </div>
+
+        <!-- Map Right Column -->
+        <div class="card">
+          <div class="map-card-header">
+            <h3><i data-lucide="map-pin"></i> Pinpoint Precise Location</h3>
+            <button class="btn btn-secondary btn-sm" id="geolocateBtn" type="button">
+              <i data-lucide="crosshair"></i> Current Location
+            </button>
+          </div>
+          <div id="citizenPickerMap" class="map-box"></div>
+        </div>
+      </div>
+
+      <!-- Citizen Grievance History -->
+      <div class="card mt-4">
+        <h3><i data-lucide="history"></i> My Submitted Grievances</h3>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Priority</th>
+                <th>Assigned To</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="citizenComplaintTable">
+              <tr><td colspan="7" class="text-center text-muted">No complaints filed yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 3. GOVT OFFICIAL (HIGHER) VIEW                 -->
+    <!-- ============================================== -->
+    <section class="portal-view" id="higherOfficialPortal" style="display: none;">
+      <div class="portal-header">
+        <div>
+          <h2>Zonal & Higher Official Triage Desk</h2>
+          <p>Review prioritized grievances, delegate work to ground engineers, or initiate transfers.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Summary & Location</th>
+                <th>Category</th>
+                <th>AI Priority</th>
+                <th>Assigned Officer</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="higherOfficialTable">
+              <tr><td colspan="7" class="text-center text-muted">No tickets currently pending assignment.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 4. GOVT OFFICIAL (GROUND) VIEW                 -->
+    <!-- ============================================== -->
+    <section class="portal-view" id="groundOfficialPortal" style="display: none;">
+      <div class="portal-header">
+        <div>
+          <h2>Field Execution Worklist</h2>
+          <p>Tasks assigned to you for inspection and on-site redressal.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Issue Details</th>
+                <th>Priority</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="groundOfficialTable">
+              <tr><td colspan="6" class="text-center text-muted">No active field tasks assigned to you.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 5. ADMINISTRATOR PORTAL                        -->
+    <!-- ============================================== -->
+    <section class="portal-view" id="adminPortal" style="display: none;">
+      <div class="portal-header">
+        <div>
+          <h2>Municipal Executive Command Center</h2>
+          <p>Holistic view of SLA compliance, live GIS hotspots, and audit logs.</p>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-num" id="adminTotalCount">0</span>
+          <span class="stat-lbl">Total Grievances</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num text-danger" id="adminHighPriCount">0</span>
+          <span class="stat-lbl">Critical / High Severity</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num text-warning" id="adminInProgressCount">0</span>
+          <span class="stat-lbl">Under Execution</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num text-success" id="adminResolvedCount">0</span>
+          <span class="stat-lbl">Successfully Resolved</span>
+        </div>
+      </div>
+
+      <div class="two-column-workspace mt-4">
+        <div class="card">
+          <h3><i data-lucide="map"></i> GIS Grievance Heatmap</h3>
+          <div id="adminGisMap" class="map-box"></div>
+        </div>
+        <div class="card">
+          <h3><i data-lucide="pie-chart"></i> Complaints by Department</h3>
+          <div class="chart-box">
+            <canvas id="deptDistributionChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <h3><i data-lucide="shield"></i> Master Ticket Log</h3>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Municipality</th>
+                <th>Category</th>
+                <th>AI Summary</th>
+                <th>Priority</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="adminMasterTable">
+              <tr><td colspan="6" class="text-center text-muted">No records available.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="js/ai-service.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
