@@ -12,7 +12,7 @@
 const AIService = {
 
   // ━━━ CONFIGURATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  GEMINI_API_KEY: 'YOUR_GEMINI_API_KEY_HERE',  // ← Replace with your key
+  GEMINI_API_KEY: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.GEMINI_API_KEY) || '',  // ← Replace with your key
   GEMINI_MODEL: 'gemini-2.0-flash',
   GEMINI_ENDPOINT: 'https://generativelanguage.googleapis.com/v1beta/models/',
 
