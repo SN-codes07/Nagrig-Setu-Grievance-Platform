@@ -13,7 +13,7 @@ const AIService = {
 
   // ━━━ CONFIGURATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   GEMINI_API_KEY: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.GEMINI_API_KEY) || '',  // ← Replace with your key
-  GEMINI_MODEL: 'gemini-2.0-flash',
+  GEMINI_MODEL: 'gemini-1.5-flash',
   GEMINI_ENDPOINT: 'https://generativelanguage.googleapis.com/v1beta/models/',
 
   // Fallback keywords (used when API is unavailable)
@@ -55,14 +55,17 @@ const AIService = {
       });
 
       if (!response.ok) {
-        console.error('Gemini API error:', response.status, await response.text());
+        const errorText = await response.text();
+        console.error('❌ Gemini API error:', response.status, errorText);
         return null;
       }
 
       const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
+      const output = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
+      console.log(`✅ Gemini Response for model ${this.GEMINI_MODEL}:`, output);
+      return output;
     } catch (err) {
-      console.error('Gemini API call failed:', err);
+      console.error('❌ Gemini API call failed network request:', err);
       return null;
     }
   },
