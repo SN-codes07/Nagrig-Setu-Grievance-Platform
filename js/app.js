@@ -313,7 +313,7 @@ async function assignTicket(id) {
         action: 'ASSIGNED',
         previous_status: 'SUBMITTED',
         new_status: 'IN_PROGRESS',
-        notes: `Assigned to ${engineerName}`
+        notes: `Assigned to ${engineerEmail}`
       });
 
       await renderHigherOfficialTable();
